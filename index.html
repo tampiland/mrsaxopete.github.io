@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12151b" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Altsax">
+<meta name="format-detection" content="telephone=no">
+<title>Altsax-transponering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;700&family=Figtree:wght@400;500;600&family=Noto+Music&display=swap">
+<style>
+/* Layout: en kolumn — tonartsväljare överst, sedan två notrader (konsert → altsax) och en nottabell. */
+:root {
+  --paper: #f5f6f3;
+  --surface: #ffffff;
+  --ink: #1c2330;
+  --muted: #5d6573;
+  --line: #d9dcd8;
+  --brass: #a8761c;
+  --brass-soft: #f3e6c8;
+  --font-display: "Spectral", Georgia, "Times New Roman", serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-music: "Noto Music", "Apple Symbols", "Segoe UI Symbol", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12151b; --surface: #1a1e26; --ink: #e9e6dd; --muted: #a2a7b0;
+    --line: #2f3540; --brass: #dcab4f; --brass-soft: #3a2f19; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12151b; --surface: #1a1e26; --ink: #e9e6dd; --muted: #a2a7b0;
+  --line: #2f3540; --brass: #dcab4f; --brass-soft: #3a2f19; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 var(--font-body);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap {
+  max-width: 760px; margin: 0 auto; display: grid; gap: 28px;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px));
+  padding-block: calc(40px + env(safe-area-inset-top, 0px)) calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+header h1 {
+  font: 700 clamp(1.9rem, 5vw, 2.6rem)/1.1 var(--font-display);
+  margin: 0 0 8px; text-wrap: balance;
+}
+header p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+.label {
+  font-size: .75rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 10px;
+}
+
+.mode { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); margin-bottom: 14px; }
+.mode button {
+  border: 0; background: none; color: var(--ink); font: 600 .9rem var(--font-body);
+  padding: 8px 20px; min-height: 40px; border-radius: 999px; cursor: pointer; touch-action: manipulation;
+}
+.mode button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.keys button {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 10px; padding: 8px 6px; cursor: pointer; text-align: center;
+  font: 600 1rem var(--font-body); display: grid; gap: 1px; min-height: 48px; align-content: center;
+  touch-action: manipulation;
+}
+.keys button small { font-weight: 400; font-size: .72rem; color: var(--muted); }
+@media (hover: hover) { .keys button:hover { border-color: var(--brass); } }
+.keys button[aria-pressed="true"] { background: var(--brass-soft); border-color: var(--brass); }
+button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+.result { display: grid; gap: 14px; }
+.summary {
+  font: 500 clamp(1.25rem, 3.5vw, 1.55rem)/1.35 var(--font-display); margin: 0; text-wrap: balance;
+}
+.summary b { color: var(--brass); font-weight: 700; }
+
+.staff-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px 6px; min-width: 0; }
+.staff-card.sax { border-color: var(--brass); }
+.staff-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; align-items: baseline; }
+.staff-head h2 { font: 700 1.15rem var(--font-display); margin: 0; }
+.staff-head span { color: var(--muted); font-size: .9rem; }
+.staff-scroll { overflow-x: auto; }
+.staff-scroll svg { display: block; width: 100%; height: auto; color: var(--ink); }
+.arrow { text-align: center; color: var(--brass); font-weight: 600; font-size: .9rem; }
+
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.table-scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+th, td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th[scope="row"] { text-align: left; font-weight: 600; }
+thead th { font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+td.sax { color: var(--brass); font-weight: 600; }
+
+.rule { color: var(--muted); font-size: .95rem; max-width: 65ch; margin: 0; }
+.rule strong { color: var(--ink); }
+
+/* Mobil: tätare rubrik, 5 knappar per rad (3 rader), resultatet närmare toppen. */
+@media (max-width: 560px) {
+  .wrap { gap: 20px; padding-block: calc(20px + env(safe-area-inset-top, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)); }
+  header h1 { font-size: 1.65rem; margin-bottom: 4px; }
+  header p { font-size: .9rem; line-height: 1.45; }
+  .pick-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .pick-row .label, .pick-row .mode { margin: 0; }
+  .keys { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .keys button { padding: 6px 2px; font-size: .95rem; border-radius: 8px; }
+  .keys button small { font-size: .68rem; }
+  .summary { font-size: 1.2rem; }
+  .staff-card { padding: 10px 10px 2px; }
+  .staff-head h2 { font-size: 1.05rem; }
+  .staff-head span { font-size: .8rem; }
+  .arrow { font-size: .8rem; margin-block: -4px; }
+  th, td { padding: 8px 4px; font-size: .9rem; }
+  th[scope="row"] { padding-left: 10px; }
+  thead th { font-size: .65rem; letter-spacing: .03em; }
+  .rule { font-size: .88rem; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Altsax-transponering</h1>
+    <p>Välj låtens tonart (konsertton, som piano och gitarr spelar) och se vad du läser på altsaxen i Ess.</p>
+  </header>
+
+  <section aria-labelledby="pick-label">
+    <div class="pick-row">
+      <p class="label" id="pick-label">Konserttonart</p>
+      <div class="mode" role="group" aria-label="Dur eller moll">
+        <button type="button" id="mode-dur" data-mode="dur">Dur</button>
+        <button type="button" id="mode-moll" data-mode="moll">Moll</button>
+      </div>
+    </div>
+    <div class="keys" id="keys"></div>
+  </section>
+
+  <section class="result" aria-live="polite">
+    <p class="summary" id="summary"></p>
+    <div class="staff-card">
+      <div class="staff-head"><h2 id="concert-title"></h2><span id="concert-sig"></span></div>
+      <div class="staff-scroll" id="concert-staff"></div>
+    </div>
+    <div class="arrow">↓ stor sext upp (eller liten ters ner) ↓</div>
+    <div class="staff-card sax">
+      <div class="staff-head"><h2 id="sax-title"></h2><span id="sax-sig"></span></div>
+      <div class="staff-scroll" id="sax-staff"></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="label">Ton för ton</p>
+    <div class="table-scroll"><table id="map"></table></div>
+  </section>
+
+  <p class="rule"><strong>Tumregel:</strong> altsaxen är stämd i Ess och låter en stor sext lägre än det som står i noterna. Läs därför varje ton en stor sext upp (eller en liten ters ner). För förtecknen: lägg till tre ♯, eller ta bort tre ♭. Blir det fler än sex ♯ byter man till samma tonart skriven med ♭.</p>
+</div>
+
+<script>
+// Tonarter ordnade efter kvintcirkeln: antal förtecken, -7 (7 b) … +7 (7 #).
+const MAJOR = { "-7":"Cb","-6":"Gb","-5":"Db","-4":"Ab","-3":"Eb","-2":"Bb","-1":"F","0":"C","1":"G","2":"D","3":"A","4":"E","5":"B","6":"F#","7":"C#" };
+const MINOR = { "-7":"Ab","-6":"Eb","-5":"Bb","-4":"F","-3":"C","-2":"G","-1":"D","0":"A","1":"E","2":"B","3":"F#","4":"C#","5":"G#","6":"D#","7":"A#" };
+const SHARP_ORDER = "FCGDAEB", FLAT_ORDER = "BEADGCF";
+// Diatoniska steg relativt E4 (nedersta linjen) i G-klav.
+const SHARP_POS = [8, 5, 9, 6, 3, 7, 4];   // F5 C5 G5 D5 A4 E5 B4
+const FLAT_POS  = [4, 7, 3, 6, 2, 5, 1];   // B4 E5 A4 D5 G4 C5 F4
+const LETTERS = "CDEFGAB";
+const START_STEP = { C: -2, D: -1, E: 0, F: 1, G: 2, A: 3, B: 4 };
+
+function svName(note) {
+  const letter = note[0], acc = note.slice(1);
+  if (letter === "B") return acc === "b" ? "B" : acc === "#" ? "Hiss" : "H";
+  if (acc === "#") return letter + "iss";
+  if (acc === "b") return letter + ("AE".includes(letter) ? "ss" : "ess");
+  return letter;
+}
+function pretty(note) { return note.replace("#", "♯").replace("b", "♭"); }
+function keyName(fifths, mode) {
+  const n = svName((mode === "dur" ? MAJOR : MINOR)[fifths]);
+  return mode === "dur" ? `${n}-dur` : `${n.toLowerCase()}-moll`;
+}
+function intlName(fifths, mode) {
+  return `${pretty((mode === "dur" ? MAJOR : MINOR)[fifths])} ${mode === "dur" ? "major" : "minor"}`;
+}
+function sigText(f) {
+  if (f === 0) return "inga förtecken";
+  const n = Math.abs(f), list = (f > 0 ? SHARP_ORDER : FLAT_ORDER).slice(0, n).split("").map(l => svName(l + (f > 0 ? "#" : "b")));
+  return `${n} ${f > 0 ? "♯" : "♭"} (${list.join(", ")})`;
+}
+// Altsax i Ess: skriven tonart = konsert + 3 korsförtecken. Över 6 ♯ → enharmoniskt till ♭.
+function saxFifths(f) { let s = f + 3; if (s > 6) s -= 12; return s; }
+
+function scale(fifths, mode) {
+  const tonic = (mode === "dur" ? MAJOR : MINOR)[fifths][0];
+  const sharps = fifths > 0 ? SHARP_ORDER.slice(0, fifths) : "";
+  const flats = fifths < 0 ? FLAT_ORDER.slice(0, -fifths) : "";
+  const i0 = LETTERS.indexOf(tonic);
+  const notes = [];
+  for (let i = 0; i < 8; i++) {
+    const l = LETTERS[(i0 + i) % 7];
+    notes.push({ name: l + (sharps.includes(l) ? "#" : flats.includes(l) ? "b" : ""), step: START_STEP[tonic] + i });
+  }
+  return notes;
+}
+
+// ---- SVG-notrad ----
+const y = step => 80 - step * 5;
+// Bredd i SVG-enheter: på smal skärm kortare notrad, så linjerna inte krymper för mycket.
+function staffWidth() {
+  const w = document.querySelector(".staff-scroll")?.clientWidth || 500;
+  return Math.round(Math.max(340, Math.min(500, w * 1.1)));
+}
+function sharpSvg(x, cy) {
+  return `<g fill="currentColor" stroke="currentColor">
+    <line x1="${x-2}" y1="${cy-10}" x2="${x-2}" y2="${cy+11}" stroke-width="1.1"/>
+    <line x1="${x+2.4}" y1="${cy-11}" x2="${x+2.4}" y2="${cy+10}" stroke-width="1.1"/>
+    <polygon stroke="none" points="${x-5},${cy-1.2} ${x+5.4},${cy-4.8} ${x+5.4},${cy-2.2} ${x-5},${cy+1.4}"/>
+    <polygon stroke="none" points="${x-5},${cy+5.2} ${x+5.4},${cy+1.6} ${x+5.4},${cy+4.2} ${x-5},${cy+7.8}"/>
+  </g>`;
+}
+function flatSvg(x, cy) {
+  return `<g fill="none" stroke="currentColor">
+    <line x1="${x-3}" y1="${cy-15}" x2="${x-3}" y2="${cy+5}" stroke-width="1.2"/>
+    <path d="M${x-3},${cy+5} C${x+6},${cy+0.5} ${x+5.5},${cy-5.5} ${x-3},${cy-1}" stroke-width="1.8"/>
+  </g>`;
+}
+function wholeNote(x, step) {
+  const cy = y(step);
+  let s = "";
+  for (let l = -2; l >= step; l -= 2) s += `<line x1="${x-11}" x2="${x+11}" y1="${y(l)}" y2="${y(l)}" stroke="currentColor" stroke-width="1"/>`;
+  for (let l = 10; l <= step; l += 2) s += `<line x1="${x-11}" x2="${x+11}" y1="${y(l)}" y2="${y(l)}" stroke="currentColor" stroke-width="1"/>`;
+  s += `<ellipse cx="${x}" cy="${cy}" rx="7" ry="4.8" fill="currentColor"/>`;
+  s += `<ellipse cx="${x}" cy="${cy}" rx="3.6" ry="2.4" fill="var(--surface)" transform="rotate(-50 ${x} ${cy})"/>`;
+  return s;
+}
+function staffSvg(fifths, mode) {
+  const W = staffWidth();
+  let s = `<svg viewBox="0 0 ${W} 112" role="img" aria-label="${keyName(fifths, mode)}, ${sigText(fifths)}">`;
+  for (let i = 0; i < 5; i++) s += `<line x1="4" x2="${W-4}" y1="${40 + i*10}" y2="${40 + i*10}" stroke="currentColor" stroke-width="1"/>`;
+  s += `<line x1="${W-4}" x2="${W-4}" y1="40" y2="80" stroke="currentColor" stroke-width="1"/>`;
+  s += `<text x="8" y="80" font-family="var(--font-music)" font-size="56" fill="currentColor">𝄞</text>`;
+  const n = Math.abs(fifths);
+  let x = 54;
+  for (let i = 0; i < n; i++, x += 12) {
+    s += fifths > 0 ? sharpSvg(x, y(SHARP_POS[i])) : flatSvg(x, y(FLAT_POS[i]));
+  }
+  const notes = scale(fifths, mode);
+  const start = Math.max(x + 22, 150), gap = (W - 30 - start) / 7;
+  notes.forEach((nt, i) => { s += wholeNote(start + i * gap, nt.step); });
+  return s + "</svg>";
+}
+
+// ---- Tillstånd & rendering ----
+let state = { mode: "dur", fifths: -2 };
+try { const saved = JSON.parse(localStorage.getItem("altsax-key")); if (saved && saved.mode && saved.fifths in MAJOR) state = saved; } catch (e) {}
+
+function renderKeys() {
+  const box = document.getElementById("keys");
+  const table = state.mode === "dur" ? MAJOR : MINOR;
+  box.innerHTML = "";
+  for (let f = -7; f <= 7; f++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.id = `key-${f}`;
+    b.setAttribute("aria-pressed", String(f === state.fifths));
+    b.innerHTML = `${svName(table[f])}<small>${f === 0 ? "–" : Math.abs(f) + (f > 0 ? " ♯" : " ♭")}</small>`;
+    b.addEventListener("click", () => { state.fifths = f; update(); });
+    box.appendChild(b);
+  }
+  document.querySelectorAll(".mode button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+}
+
+function update() {
+  try { localStorage.setItem("altsax-key", JSON.stringify(state)); } catch (e) {}
+  renderKeys();
+  const f = state.fifths, m = state.mode, sf = saxFifths(f);
+  document.getElementById("summary").innerHTML =
+    `Låten går i ${keyName(f, m)}. På altsaxen läser du <b>${keyName(sf, m)}</b>.`;
+  document.getElementById("concert-title").textContent = `Konsert: ${keyName(f, m)}`;
+  document.getElementById("concert-sig").textContent = `${intlName(f, m)} · ${sigText(f)}`;
+  document.getElementById("sax-title").textContent = `Altsax: ${keyName(sf, m)}`;
+  document.getElementById("sax-sig").textContent = `${intlName(sf, m)} · ${sigText(sf)}`;
+  document.getElementById("concert-staff").innerHTML = staffSvg(f, m);
+  document.getElementById("sax-staff").innerHTML = staffSvg(sf, m);
+
+  const c = scale(f, m).slice(0, 7), s = scale(sf, m).slice(0, 7);
+  const degrees = ["1", "2", "3", "4", "5", "6", "7"];
+  document.getElementById("map").innerHTML =
+    `<thead><tr><th scope="col">Steg</th>${degrees.map(d => `<th scope="col">${d}</th>`).join("")}</tr></thead>
+     <tbody>
+       <tr><th scope="row">Konsert</th>${c.map(n => `<td>${svName(n.name)}</td>`).join("")}</tr>
+       <tr><th scope="row">Altsax</th>${s.map(n => `<td class="sax">${svName(n.name)}</td>`).join("")}</tr>
+     </tbody>`;
+}
+
+document.querySelectorAll(".mode button").forEach(b =>
+  b.addEventListener("click", () => { state.mode = b.dataset.mode; update(); }));
+update();
+let lastW = staffWidth();
+window.addEventListener("resize", () => {
+  const w = staffWidth();
+  if (w !== lastW) { lastW = w; update(); }
+});
+</script>
+</body>
+</html>
